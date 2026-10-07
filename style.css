@@ -13,6 +13,8 @@
 }
 
 * { box-sizing: border-box; }
+/* L'attribut hidden doit toujours masquer, même sur un élément en display: grid ou flex */
+[hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
 body {
   background: var(--bg);

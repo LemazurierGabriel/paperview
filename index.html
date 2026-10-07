@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PaperView — Trading fictif</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 17l5-6 4 4 8-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Paper<b>View</b></span>
+  </div>
+  <div class="sym-info">
+    <span id="hdrSym" class="hdr-sym">BTC/USDT</span>
+    <span id="hdrPrice" class="hdr-price">—</span>
+    <span id="hdrChg" class="hdr-chg">—</span>
+  </div>
+  <div id="feedStatus" class="feed"><i></i><span>Connexion…</span></div>
+  <div class="account">
+    <div class="score" id="score" title="Chaque trade clôturé : 1 $ gagné = +1 point, 1 $ perdu = −1 point. Clic : classement des joueurs">
+      <label><span id="scorePartie">Partie #1</span><span id="worldRank" class="world-rank"></span></label>
+      <span><b id="scorePts">0</b> pts <em id="scoreRank" class="rank">Débutant</em></span>
+    </div>
+    <div class="acc"><label>Solde dispo</label><span id="accCash">—</span></div>
+    <div class="acc"><label>Équité</label><span id="accEquity">—</span></div>
+    <div class="acc hide-md"><label>PnL latent</label><span id="accUpnl">—</span></div>
+    <div class="acc hide-md"><label>Marge utilisée</label><span id="accMargin">—</span></div>
+    <div class="acc"><label>Performance</label><span id="accPerf">—</span></div>
+    <button id="btnTuto" class="btn-ghost" title="Revoir le tutoriel">? Tuto</button>
+    <button id="btnReset" class="btn-ghost" title="Terminer la partie : retour à 10 000 $ et 0 point">Réinitialiser</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="chart-area">
+    <div class="toolbar">
+      <div class="group" id="tfGroup"></div>
+      <div class="sep"></div>
+      <div class="group">
+        <select id="chartType" class="tb-select" title="Type de graphique"></select>
+      </div>
+      <div class="sep"></div>
+      <div class="group">
+        <button id="btnInd" title="Ajouter ou régler des indicateurs"><b class="fx">ƒx</b>Indicateurs</button>
+      </div>
+      <div class="sep"></div>
+      <div class="group">
+        <button id="btnLog" title="Échelle logarithmique : utile quand le prix a beaucoup varié">Log</button>
+        <button id="btnFit" title="Revenir aux dernières bougies et recentrer l'échelle">Recentrer</button>
+        <button id="btnShot" title="Capture d'écran du graphique (PNG)">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="indMenu" class="ind-menu" hidden></div>
+
+    <div class="chart-row">
+      <div class="draw-bar" id="drawBar" aria-label="Outils de dessin"></div>
+      <div class="chart-wrap">
+        <div id="chart"></div>
+        <svg id="drawLayer" class="draw-layer"></svg>
+        <div id="legend" class="legend"></div>
+        <div id="paneLegends" class="pane-legends"></div>
+        <div id="drawMenu" class="draw-menu" hidden></div>
+        <div id="hint" class="hint" hidden></div>
+      </div>
+    </div>
+
+    <div class="bottom-panel">
+      <div class="tabs" id="tabs">
+        <button data-tab="positions" class="active">Positions <span id="cntPos" class="cnt">0</span></button>
+        <button data-tab="orders">Ordres en attente <span id="cntOrd" class="cnt">0</span></button>
+        <button data-tab="history">Historique <span id="cntHist" class="cnt">0</span></button>
+        <button data-tab="parties">Parties <span id="cntParties" class="cnt">1</span></button>
+        <button data-tab="board">🏆 Classement</button>
+        <div class="tabs-right" id="tabActions"></div>
+      </div>
+      <div class="tab-body" id="tab-positions"></div>
+      <div class="tab-body" id="tab-orders" hidden></div>
+      <div class="tab-body" id="tab-history" hidden></div>
+      <div class="tab-body" id="tab-parties" hidden></div>
+      <div class="tab-body" id="tab-board" hidden></div>
+    </div>
+  </section>
+
+  <aside class="sidebar">
+    <div class="watchlist">
+      <div class="panel-head">
+        <span>Liste de suivi</span>
+        <input id="wlFilter" placeholder="Rechercher…" autocomplete="off">
+      </div>
+      <div class="wl-cats" id="wlCats"></div>
+      <div class="wl-head"><span>Symbole</span><span>Dernier</span><span>Var.</span></div>
+      <div id="wlBody" class="wl-body"></div>
+    </div>
+
+    <div class="order-panel">
+      <div class="side-switch">
+        <button data-side="long" class="active">Acheter / Long</button>
+        <button data-side="short">Vendre / Short</button>
+      </div>
+      <div class="type-switch">
+        <button data-type="market" class="active">Marché</button>
+        <button data-type="limit">Limite</button>
+      </div>
+
+      <label class="field" id="fLimit" hidden><span>Prix limite</span><input id="inLimit" inputmode="decimal" autocomplete="off"><em>USDT</em></label>
+      <label class="field" id="fAmount"><span>Marge</span><input id="inAmount" inputmode="decimal" value="1000" autocomplete="off"><em>USD</em></label>
+      <div class="pct" id="pctBtns">
+        <button data-pct="10">10%</button><button data-pct="25">25%</button><button data-pct="50">50%</button><button data-pct="100">Max</button>
+      </div>
+      <label class="field" id="fLev"><span>Levier</span>
+        <select id="inLev">
+          <option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="5">5×</option>
+          <option value="10">10×</option><option value="20">20×</option><option value="50">50×</option>
+        </select>
+      </label>
+      <div class="row2" id="fSLTP">
+        <label class="field" id="fSL"><span>Stop-loss</span><input id="inSL" inputmode="decimal" placeholder="—" autocomplete="off"></label>
+        <label class="field" id="fTP"><span>Take-profit</span><input id="inTP" inputmode="decimal" placeholder="—" autocomplete="off"></label>
+      </div>
+
+      <dl class="summary" id="summary"></dl>
+      <button id="btnSubmit" class="submit long">Acheter</button>
+      <p class="note">Argent 100 % fictif · prix réels · 1 $ gagné = 1 point</p>
+    </div>
+  </aside>
+</main>
+
+<div id="toasts" class="toasts"></div>
+
+<div id="tour" class="tour" hidden>
+  <div id="tourSpot" class="tour-spot"></div>
+  <div id="tourCard" class="tour-card" role="dialog" aria-modal="true" aria-labelledby="tourTitle"></div>
+</div>
+
+<div id="nameModal" class="modal" hidden>
+  <form class="modal-card" id="nameForm" autocomplete="off">
+    <h3>Ton pseudo de joueur</h3>
+    <p>Il apparaîtra dans le classement, à côté de ton record de points. Entre 2 et 20 caractères.</p>
+    <input id="nameInput" maxlength="20" placeholder="Ex. : Gabriel" spellcheck="false">
+    <p class="modal-err" id="nameErr"></p>
+    <div class="modal-actions">
+      <button type="button" class="tour-btn secondary" data-close>Annuler</button>
+      <button type="submit" class="tour-btn primary">Valider</button>
+    </div>
+  </form>
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="indicators.js"></script>
+<script src="drawings.js"></script>
+<script src="leaderboard.js"></script>
+<script src="tuto.js"></script>
+</body>
+</html>

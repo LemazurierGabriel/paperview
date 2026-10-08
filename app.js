@@ -1063,7 +1063,9 @@ async function loadChart() {
   refreshIndicators(true);
   updateMarkers();
   syncPriceLines(true);
-  chart.timeScale().setVisibleLogicalRange({ from: bars.length - 140, to: bars.length + 8 });
+  // Recadre et remet l'échelle de prix en automatique : si le joueur avait étiré l'échelle
+  // de l'actif précédent, elle restait figée sur ses prix et le nouveau graphique semblait vide
+  fitChart();
   renderLegend(last);
   connectKline();
   if (ui.type === 'limit' && !$('inLimit').value) $('inLimit').value = defaultLimit();
